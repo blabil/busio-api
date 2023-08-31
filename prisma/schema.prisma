@@ -1,0 +1,263 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String           @unique @default(uuid())
+  email                 String           @unique
+  passwordHash          String
+  role                  Role             @default(USER)
+  profile               UserProfile?
+  
+
+  createdAt DateTime @default(now())
+  updateAt DateTime @updatedAt()
+
+  busIssue              BusIssue[]
+  busIssueModify        BusIssueModify[]
+  busBreakDown          BusBreakDown[]
+  busBreakDownModify    BusBreakDownModify[]
+  busReview             BusReview[]
+}
+
+model UserProfile {
+  id                    Int             @id @default(autoincrement())
+  fullName              String
+  phone                 String
+  address               String?
+  user                  User            @relation(fields: [user_id], references: [id])
+  user_id               String          @unique
+}
+
+enum Role {
+  USER
+  DRIVER
+  MECHANIC
+  ADMIN
+}
+
+// 
+// BUS MODEL
+//
+
+
+model Bus {
+  id                    Int             @unique @id @default(autoincrement())
+  registration          String          @unique
+  state                 BusState
+
+  busProfile            BusProfile?
+  busIssues             BusIssue[]
+  busBreakDowns         BusBreakDown[]
+  busReview             BusReview[]
+  @@index([id], name: "bus_id")
+}
+
+model BusProfile {
+  id                    Int             @unique @id @default(autoincrement())
+  brand                 String
+  model                 String
+  productionYear        String
+  seats                 Int
+  engine                BusEngine
+
+  bus                   Bus             @relation(fields: [bus_id], references: [id])
+  bus_id                Int             @unique
+}
+
+//
+// BUS ISSUE
+//
+
+model BusIssue {
+  id                    Int             @unique @id @default(autoincrement())
+  state                 BusRepairState  @default(UNSOLVED)
+  title                 String
+  desc                  String
+              
+  modify                BusIssueModify[]
+
+  bus                   Bus             @relation(fields: [bus_id], references: [id])
+  bus_id                Int             
+
+  user                  User            @relation(fields: [user_id], references: [id])
+  user_id               String          
+
+  createdAt             DateTime        @default(now())
+  solvedAt              DateTime?       
+}
+
+model BusIssueModify {
+  id                    Int             @unique @id @default(autoincrement())
+  desc                  String
+
+  busIssue              BusIssue        @relation(fields: [busIssue_id], references: [id])
+  busIssue_id           Int             
+
+  user                  User            @relation(fields: [user_id], references: [id])
+  user_id               String          
+  modifyAt              DateTime        @default(now())
+}
+
+
+//
+// BUS BRAKEDOWN
+//
+
+model BusBreakDown {
+  id                    Int             @unique @id @default(autoincrement())
+  state                 BusRepairState  @default(UNSOLVED)
+  title                 String
+  desc                  String
+              
+  modify                BusBreakDownModify[]
+
+  bus                   Bus             @relation(fields: [bus_id], references: [id])
+  bus_id                Int             
+
+  user                  User            @relation(fields: [user_id], references: [id])
+  user_id               String          
+
+  createdAt             DateTime        @default(now())
+  solvedAt              DateTime?        
+}
+
+model BusBreakDownModify {
+  id                    Int             @unique @id @default(autoincrement())
+  desc                  String
+
+  BusBreakDown          BusBreakDown        @relation(fields: [BusBreakDown_id], references: [id])
+  BusBreakDown_id       Int             
+
+  user                  User            @relation(fields: [user_id], references: [id])
+  user_id               String          
+  modifyAt              DateTime        @default(now())
+}
+
+//
+// BUS REVIEW
+//
+
+model BusReview {
+  id                    Int             @unique @id @default(autoincrement())
+  additionalInfo        String?
+  isActuall             Boolean
+  isPositive            Boolean
+
+  bus                   Bus             @relation(fields: [bus_id], references: [id])
+  bus_id                Int             
+
+  user                  User            @relation(fields: [user_id], references: [id])
+  user_id               String          
+
+  createdAt             DateTime        
+  expiresAt             DateTime?
+}
+
+
+
+
+// 
+// BUS ENUMS
+//
+
+enum BusState {
+  AVAIABLE
+  UNAVAIABLE
+  BROKEN
+}
+
+enum BusEngine {
+  ELECTRIC
+  DIESEL
+}
+
+enum BusRepairState {
+  SOLVED
+  UNSOLVED
+  UNDER_REPAIR
+}
+
+
+//
+// BUSLINE MODEL
+//
+
+model BusLine {
+  id                    Int             @unique @id @default(autoincrement())
+  number                String          @unique
+  fullTime              Int
+  part                  String
+  busLineStops          BusLineStop[]
+  BusLineRoutes         BusLineRoute[]
+  BusLineConnections    BusLineConnection[]
+}
+
+
+model BusStop {
+  id                    Int             @id @default(autoincrement())
+  address               String          @unique
+  active                Boolean         @default(true)
+  busLineStops          BusLineStop[]
+
+  connectionFrom        BusStopConnection[]   @relation(name: "ConnectionFrom")
+  connectionTo          BusStopConnection[]   @relation(name: "ConnectionTo")
+}
+
+
+model BusLineStop {
+  busLine               BusLine           @relation(fields: [busLine_id], references: [id])
+  busLine_id            Int               
+  busStop               BusStop           @relation(fields: [busStop_id], references: [id])
+  busStop_id            Int               
+  @@id([busLine_id, busStop_id])
+}
+
+model BusStopConnection {
+  time                  Int               @default(0)
+  busStopFrom           BusStop           @relation(name: "ConnectionFrom", fields: [busStopFrom_id], references: [id])
+  busStopFrom_id        Int               
+  busStopTo             BusStop           @relation(name: "ConnectionTo", fields: [busStopTo_id], references: [id])
+  busStopTo_id          Int               
+  @@unique([busStopFrom_id, busStopTo_id])
+
+  BusLineConnections   BusLineConnection[]
+}
+
+model BusLineConnection{
+  order                 Int
+  busStopConnection     BusStopConnection @relation(fields: [StopConnection_From, StopConnection_To], references: [busStopFrom_id, busStopTo_id])
+  StopConnection_From   Int
+  StopConnection_To     Int
+  busLine               BusLine           @relation(fields: [busLine_id], references: [id])
+  busLine_id            Int
+  @@unique([StopConnection_From,StopConnection_To,busLine_id])     
+}
+
+model BusLineRoute {
+  id                   Int              @unique @id @default(autoincrement())
+  startTime            String
+  time                 BusLineRouteTime
+  type                 BusLineRouteType
+
+  busLine              BusLine          @relation(fields: [busLine_id], references: [id])
+  busLine_id           Int              
+}
+
+enum BusLineRouteTime {
+  FULL
+  HALF
+}
+
+enum BusLineRouteType {
+  MONFRI
+  WEEK
+  WEEKEND
+  SPECIAL
+}
