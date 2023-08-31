@@ -24,6 +24,7 @@ model User {
   busBreakDown          BusBreakDown[]
   busBreakDownModify    BusBreakDownModify[]
   busReview             BusReview[]
+  BusLineRoute          BusLineRoute[]
 }
 
 model UserProfile {
@@ -53,6 +54,7 @@ model Bus {
   state                 BusState
 
   busProfile            BusProfile?
+  busLineRoute          BusLineRoute[]
   busIssues             BusIssue[]
   busBreakDowns         BusBreakDown[]
   busReview             BusReview[]
@@ -247,7 +249,13 @@ model BusLineRoute {
   type                 BusLineRouteType
 
   busLine              BusLine          @relation(fields: [busLine_id], references: [id])
-  busLine_id           Int              
+  busLine_id           Int     
+
+  driver              User?              @relation(fields: [driver_id], references: [id])
+  driver_id           String?
+
+  bus                 Bus?               @relation(fields: [bus_id], references: [id])
+  bus_id              Int?         
 }
 
 enum BusLineRouteTime {

@@ -17,4 +17,11 @@ export class DriverController {
   getWorker(@Param() params: {id: string}){
     return this.driverService.getWorker(params.id);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('drivers/:id')
+  getDrivers(@Param() params: {id: string})
+  {
+    return this.driverService.getDrivers(params.id);
+  }
 }
