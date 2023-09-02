@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { DriverService } from './worker.service';
-import { DriverController } from './worker.controller';
+import { WorkerService } from './worker.service';
+import { WorkerController } from './worker.controller';
 import { JwtStrategy } from 'src/auth/jwt.strategy';
 
 @Module({
-  controllers: [DriverController],
-  providers: [DriverService, JwtStrategy]
+  controllers: [WorkerController],
+  providers: [WorkerService, JwtStrategy]
 })
-export class DriverModule {}
+export class WorkerModule {}

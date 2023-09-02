@@ -1,27 +1,33 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
-import { DriverService } from './worker.service';
+import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import { WorkerService } from './worker.service';
 import { JwtAuthGuard } from 'src/auth/jwt.guard';
 
 @Controller('worker')
-export class DriverController {
-  constructor(private readonly driverService: DriverService) {}
+export class WorkerController {
+  constructor(private readonly workerService: WorkerService) {}
 
   @UseGuards(JwtAuthGuard)
   @Get()
   getWorkers(){
-    return this.driverService.getWorkers();
+    return this.workerService.getWorkers();
   }
 
   @UseGuards(JwtAuthGuard)
   @Get(':id')
   getWorker(@Param() params: {id: string}){
-    return this.driverService.getWorker(params.id);
+    return this.workerService.getWorker(params.id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('drivers/:id')
   getDrivers(@Param() params: {id: string})
   {
-    return this.driverService.getDrivers(params.id);
+    return this.workerService.getDrivers(params.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('assign/:id')
+  assignDriverToRoute(@Param('id') id: string, @Body() body){
+    return this.workerService.assignDriverToRoute(id, body.driverID);
   }
 }

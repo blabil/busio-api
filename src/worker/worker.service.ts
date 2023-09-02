@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
+import { TimeStampTools } from '../helpers';
 
 @Injectable()
-export class DriverService {
+export class WorkerService {
     constructor(private prisma: PrismaService){}
 
     async getWorkers(){
@@ -36,68 +37,71 @@ export class DriverService {
     {
         const filteredDriverArray = [];
         await this.prisma.busLineRoute.findUnique({where:{id : parseInt(id)}, include: {busLine:{select: {fullTime: true}}}}).then(async (route) =>{
-            const initialTime = this.returnFormatDate(route.startTime, route.busLine.fullTime);
-            const fullTime = this.getTimeStampFromTimeString(initialTime);
-            const startTime = this.getTimeStampFromTimeString(route.startTime);
+            let routeFulltime : number = 0
+            route.time === "FULL" ? routeFulltime = route.busLine.fullTime * 2 : routeFulltime = route.busLine.fullTime;
+            const initialTime = TimeStampTools.returnFormatDate(route.startTime, routeFulltime);
+            const fullTime = TimeStampTools.getTimeStampFromTimeString(initialTime);
+            const startTime = TimeStampTools.getTimeStampFromTimeString(route.startTime);
 
-            await this.prisma.user.findMany({where: {role:"DRIVER"}, include:{ BusLineRoute: {select: {type: true, startTime: true, busLine: true}},profile: {select: {fullName: true}}}}).then((driverList) =>{
-                driverList.map((driver) =>{
+            const driverList = await this.prisma.user.findMany({where: {role:"DRIVER"}, include:{ BusLineRoute: {select: {type: true, startTime: true, busLine: true}},profile: {select: {fullName: true}}}})
+               outerLoop:  for(const driver of driverList)
+               {
+                    if(driver.BusLineRoute.length === 0 ) 
+                    {
+                        filteredDriverArray.push(driver);
+                        continue outerLoop;
+                    }
 
-                    if(route.type === "MONFRI"){
-                        driver.BusLineRoute.map((droute) =>{
+                    let checkIfDriverAviable : boolean = false;
+                    for(const droute of driver.BusLineRoute)
+                    {
+                        if(route.type === "MONFRI")
+                        {
                             if(droute.type === "MONFRI" || droute.type === "WEEK"){
-                                const tempTime = this.returnFormatDate(droute.startTime, droute.busLine.fullTime);
-                                const tempFullTime = this.getTimeStampFromTimeString(tempTime);
-                                const tempStartTime = this.getTimeStampFromTimeString(droute.startTime);
-                                if(startTime> tempFullTime && fullTime < tempStartTime) filteredDriverArray.push(driver);
+                                const tempTime = TimeStampTools.returnFormatDate(droute.startTime, droute.busLine.fullTime);
+                                const tempFullTime = TimeStampTools.getTimeStampFromTimeString(tempTime);
+                                const tempStartTime = TimeStampTools.getTimeStampFromTimeString(droute.startTime);
+                                if(startTime> tempFullTime && fullTime < tempStartTime) checkIfDriverAviable = true;
+                                else checkIfDriverAviable = false;
                             }
-                        })
-                    }
-                    if(route.type === "WEEKEND"){
-                        driver.BusLineRoute.map((droute) =>{
+                            else if(droute.type === "WEEKEND") checkIfDriverAviable = true;
+                        } else if(route.type === "WEEKEND") {
                             if(droute.type === "WEEKEND" || droute.type === "WEEK"){
-                                const tempTime = this.returnFormatDate(droute.startTime, droute.busLine.fullTime);
-                                const tempFullTime = this.getTimeStampFromTimeString(tempTime);
-                                const tempStartTime = this.getTimeStampFromTimeString(droute.startTime);
-                                if(startTime> tempFullTime && fullTime < tempStartTime) filteredDriverArray.push(driver);
+                                const tempTime = TimeStampTools.returnFormatDate(droute.startTime, droute.busLine.fullTime);
+                                const tempFullTime = TimeStampTools.getTimeStampFromTimeString(tempTime);
+                                const tempStartTime = TimeStampTools.getTimeStampFromTimeString(droute.startTime);
+                                if(startTime> tempFullTime && fullTime < tempStartTime) checkIfDriverAviable = true;
+                                else checkIfDriverAviable = false;
                             }
-                        })
-                    }
-                    if(route.type === "WEEK"){
-                        driver.BusLineRoute.map((droute) =>{
+                            else if(droute.type === "MONFRI") checkIfDriverAviable = true;
+                        }
+                        else if(route.type === "WEEK")
+                        {
                             if(droute.type === "MONFRI" || droute.type === "WEEK" || droute.type === "WEEKEND"){
-                                const tempTime = this.returnFormatDate(droute.startTime, droute.busLine.fullTime);
-                                const tempFullTime = this.getTimeStampFromTimeString(tempTime);
-                                const tempStartTime = this.getTimeStampFromTimeString(droute.startTime);
-                                if(startTime> tempFullTime && fullTime < tempStartTime) filteredDriverArray.push(driver);
+                                const tempTime = TimeStampTools.returnFormatDate(droute.startTime, droute.busLine.fullTime);
+                                const tempFullTime = TimeStampTools.getTimeStampFromTimeString(tempTime);
+                                const tempStartTime = TimeStampTools.getTimeStampFromTimeString(droute.startTime);
+                                if(startTime> tempFullTime && fullTime < tempStartTime) checkIfDriverAviable = true;
+                                else checkIfDriverAviable = false;
                             }
-                        })
+                        }
+                        else checkIfDriverAviable = true;  
                     }
-                    if(route.type==="SPECIAL") filteredDriverArray.push(driver)
-                })
-            })
-        }
-        );
+                    if(checkIfDriverAviable) filteredDriverArray.push(driver);
+                }
+        });
         return filteredDriverArray;
     }
 
-    returnFormatDate(startTime : string, fullTime : number)
-    {
-        const [godzina, minuty] : Array<string>= startTime.split(':')
-        const date : Date = new Date();
-        date.setHours(parseInt(godzina));
-        date.setMinutes(parseInt(minuty));
-        const timeMilis : number = fullTime * 60 * 1000; 
-        date.setTime(date.getTime() + timeMilis);
-        return date.toLocaleDateString("pl-PL", {
-            hour: "numeric",
-            minute: "numeric",
-          }).split(', ')[1];
+    async assignDriverToRoute(id : string, driverID : string ){
+        await this.prisma.busLineRoute.update({
+            where: {id: parseInt(id)},
+            data: {
+                driver: {connect: {id: driverID}}
+            }
+        })
+        const worker = await this.getWorker(driverID);
+        delete worker.passwordHash;
+        return ({message: "Pomyślnie przypisano kierowcę." , worker: worker});
     }
-
-    getTimeStampFromTimeString(timeString) {
-        const [hours, minutes] = timeString.split(":").map(Number);
-        const now = new Date();
-        return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes).getTime();
-      }
 }

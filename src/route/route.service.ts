@@ -76,9 +76,10 @@ export class RouteService {
     async returnOneRoute(id: string)
     {
         
-        const foundRoute = await this.prisma.busLineRoute.findUnique({where: {id: parseInt(id)}, include: {busLine: true}});
-
-        return ({busLineID: foundRoute.busLine_id, busLineNumber: foundRoute.busLine.number, startTime: foundRoute.startTime, routetime: foundRoute.time, routeType: foundRoute.type });
+        const foundRoute = await this.prisma.busLineRoute.findUnique({where: {id: parseInt(id)}, include: {busLine: true, bus:{include: {busProfile: true}}, driver: {include: {profile: true}}}});
+        if(foundRoute.driver)
+            delete foundRoute.driver.passwordHash;
+        return ({busLineID: foundRoute.busLine_id, busLineNumber: foundRoute.busLine.number, startTime: foundRoute.startTime, routetime: foundRoute.time, routeType: foundRoute.type, bus:foundRoute.bus, driver: foundRoute.driver });
     
     }
 
