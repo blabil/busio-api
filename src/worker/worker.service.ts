@@ -21,7 +21,7 @@ export class WorkerService {
     {
         const user = await this.prisma.user.findUnique({
             where: { id: id },
-             include: {profile:true, busBreakDown: true, busBreakDownModify: true, busIssue: true, busIssueModify: true, busReview: {orderBy: {isActuall: "desc"}}}})
+             include: {profile:true, busBreakDown: true, busBreakDownModify: true, busIssue: true, busIssueModify: true, busReview: {orderBy: {isActuall: "desc"}}, BusLineRoute: {include:{busLine: true}}}})
 
         if(!user)
         {

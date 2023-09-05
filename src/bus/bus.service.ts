@@ -62,7 +62,18 @@ export class BusService {
             busReview: {
                 orderBy:{
                     expiresAt: "desc",
-                }}}});
+                }},
+            busLineRoute: {include: {busLine: true}},
+            }});
+        return bus;
+    }
+
+    async getBusProfile(busID: string)
+    {
+        const bus = await this.prisma.bus.findUnique({where: {id: parseInt(busID)}, 
+        include: {
+            busProfile: true,
+        }});
         return bus;
     }
 
@@ -70,48 +81,59 @@ export class BusService {
     {
         const filteredBusArray = [];
         await this.prisma.busLineRoute.findUnique({where:{id : parseInt(id)}, include: {busLine:{select: {fullTime: true}}}}).then(async (route) =>{
-            const initialTime = TimeStampTools.returnFormatDate(route.startTime, route.busLine.fullTime);
+            let routeFulltime : number = 0
+            route.time === "FULL" ? routeFulltime = route.busLine.fullTime * 2 : routeFulltime = route.busLine.fullTime;
+            const initialTime = TimeStampTools.returnFormatDate(route.startTime, routeFulltime);
             const fullTime = TimeStampTools.getTimeStampFromTimeString(initialTime);
             const startTime = TimeStampTools.getTimeStampFromTimeString(route.startTime);
 
-            await this.prisma.bus.findMany({include: {busLineRoute: {select: {type: true, startTime: true, busLine: true}}}}).then((busList) =>{
-                busList.map((bus) =>{
+            const busList = await this.prisma.bus.findMany({include: {busLineRoute: {include: {busLine: true}}, busProfile: true}})
+               outerLoop:  for(const bus of busList)
+               {
+                    if(bus.busLineRoute.length === 0 ) 
+                    {
+                        filteredBusArray.push(bus);
+                        continue outerLoop;
+                    }
 
-                    if(route.type === "MONFRI"){
-                        bus.busLineRoute.map((droute) =>{
+                    let checkIfBusAviable : boolean = false;
+                    for(const droute of bus.busLineRoute)
+                    {
+                        if(route.type === "MONFRI")
+                        {
                             if(droute.type === "MONFRI" || droute.type === "WEEK"){
                                 const tempTime = TimeStampTools.returnFormatDate(droute.startTime, droute.busLine.fullTime);
                                 const tempFullTime = TimeStampTools.getTimeStampFromTimeString(tempTime);
                                 const tempStartTime = TimeStampTools.getTimeStampFromTimeString(droute.startTime);
-                                if(startTime> tempFullTime && fullTime < tempStartTime) filteredBusArray.push(bus);
+                                if(startTime> tempFullTime && fullTime < tempStartTime) checkIfBusAviable = true;
+                                else checkIfBusAviable = false;
                             }
-                        })
-                    }
-                    if(route.type === "WEEKEND"){
-                        bus.busLineRoute.map((droute) =>{
+                            else if(droute.type === "WEEKEND") checkIfBusAviable = true;
+                        } else if(route.type === "WEEKEND") {
                             if(droute.type === "WEEKEND" || droute.type === "WEEK"){
                                 const tempTime = TimeStampTools.returnFormatDate(droute.startTime, droute.busLine.fullTime);
                                 const tempFullTime = TimeStampTools.getTimeStampFromTimeString(tempTime);
                                 const tempStartTime = TimeStampTools.getTimeStampFromTimeString(droute.startTime);
-                                if(startTime> tempFullTime && fullTime < tempStartTime) filteredBusArray.push(bus);
+                                if(startTime> tempFullTime && fullTime < tempStartTime) checkIfBusAviable = true;
+                                else checkIfBusAviable = false;
                             }
-                        })
-                    }
-                    if(route.type === "WEEK"){
-                        bus.busLineRoute.map((droute) =>{
+                            else if(droute.type === "MONFRI") checkIfBusAviable = true;
+                        }
+                        else if(route.type === "WEEK")
+                        {
                             if(droute.type === "MONFRI" || droute.type === "WEEK" || droute.type === "WEEKEND"){
                                 const tempTime = TimeStampTools.returnFormatDate(droute.startTime, droute.busLine.fullTime);
                                 const tempFullTime = TimeStampTools.getTimeStampFromTimeString(tempTime);
                                 const tempStartTime = TimeStampTools.getTimeStampFromTimeString(droute.startTime);
-                                if(startTime> tempFullTime && fullTime < tempStartTime) filteredBusArray.push(bus);
+                                if(startTime> tempFullTime && fullTime < tempStartTime) checkIfBusAviable = true;
+                                else checkIfBusAviable = false;
                             }
-                        })
+                        }
+                        else checkIfBusAviable = true;  
                     }
-                    if(route.type==="SPECIAL") filteredBusArray.push(bus)
-                })
-            })
-        }
-        );
+                    if(checkIfBusAviable) filteredBusArray.push(bus);
+                }
+        });
         return filteredBusArray;
     }
 

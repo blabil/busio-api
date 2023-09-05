@@ -27,6 +27,12 @@ export class BusController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('profile/:id')
+  getBusProfile(@Param() params: {id: string}){
+    return this.busService.getBusProfile(params.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('buses/:id')
   getBusAviableBuses(@Param() params: {id: string}){
     return this.busService.getAvialbleBuses(params.id);

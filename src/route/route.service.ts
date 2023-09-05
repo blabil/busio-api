@@ -181,4 +181,12 @@ export class RouteService {
         const foundRoute = await this.prisma.route.findMany({where: {driver_id: id}});
         return foundRoute;
     }
+
+    async returnRoutesAssignedTo(id: string, type: string)
+    {
+        let foundRoutes = null;
+        if(type === 'bus') foundRoutes = await this.prisma.busLineRoute.findMany({where: {bus_id: parseInt(id)}, include: {busLine: {select: {number: true}}}});
+        else foundRoutes = await this.prisma.busLineRoute.findMany({where: {driver_id: id}, include:{busLine: {select: {number: true}}}})
+        return foundRoutes;
+    }
 }

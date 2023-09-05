@@ -51,6 +51,13 @@ export class RouteController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('assigned/:id/:type')
+  returnRoutesAssignedTo(@Param() params: {id: string, type: string})
+  {
+    return this.routeService.returnRoutesAssignedTo(params.id, params.type);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Patch(':id')
   updateuser(@Param('id') id: string, @Body() body){
     return this.routeService.updateRoute(id, body.driverID);
