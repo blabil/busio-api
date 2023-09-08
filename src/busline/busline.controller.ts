@@ -58,4 +58,12 @@ export class BuslineController {
   {
     return this.buslineService.deleteBusLine(id);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('stop/:busStop/:busLine')
+  deleteBusLineStop(@Param() params: {busStop: string, busLine: string})
+  {
+    return this.buslineService.deleteBusLineStop(params.busStop, params.busLine);
+  }
+
 }

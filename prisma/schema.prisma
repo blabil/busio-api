@@ -234,6 +234,7 @@ model BusStopConnection {
 
 model BusLineConnection{
   order                 Int
+  reverse               Boolean           @default(false)
   busStopConnection     BusStopConnection @relation(fields: [StopConnection_From, StopConnection_To], references: [busStopFrom_id, busStopTo_id])
   StopConnection_From   Int
   StopConnection_To     Int

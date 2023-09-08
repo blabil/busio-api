@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Res, UseGuards } from '@nestjs/common';
 import { BusstopService } from './busstop.service';
 import { JwtAuthGuard } from 'src/auth/jwt.guard';
 
@@ -61,4 +61,11 @@ export class BusstopController {
   updateStopTimeConnection(@Param('id') id: string, @Body() body ){
     return this.busstopService.updateStopTimeConnection(id, body.busStopToID, body.connectionTime);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  deleteStop(@Param() params: {id: string} ){
+    return this.busstopService.deleteStop(params.id);
+  }
+
 }

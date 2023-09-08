@@ -110,9 +110,18 @@ export class RouteService {
                             }
                         ]
                 }});
-
-                const busStopFrom = await this.prisma.busStop.findUnique({where: {id: connection.busStopFrom_id}});
-                const busStopTo = await this.prisma.busStop.findUnique({where: {id: connection.busStopTo_id}});
+                let busStopTo = null;
+                let busStopFrom = null;
+                if(element.reverse === true)
+                {
+                    busStopFrom = await this.prisma.busStop.findUnique({where: {id: connection.busStopTo_id}});
+                    busStopTo = await this.prisma.busStop.findUnique({where: {id: connection.busStopFrom_id}});
+                }
+                else{
+                    busStopFrom = await this.prisma.busStop.findUnique({where: {id: connection.busStopFrom_id}});
+                    busStopTo = await this.prisma.busStop.findUnique({where: {id: connection.busStopTo_id}});
+                }
+                
 
 
                 let obj = {busStop: busStopFrom.address, time: startTime};
@@ -139,7 +148,9 @@ export class RouteService {
                             }
                         ]
                 }});
-                const busStopTo = await this.prisma.busStop.findUnique({where: {id: connection.busStopTo_id}});
+                let busStopTo = null;
+                if(element.reverse === true ) busStopTo = await this.prisma.busStop.findUnique({where: {id: connection.busStopFrom_id}});
+                else busStopTo = await this.prisma.busStop.findUnique({where: {id: connection.busStopTo_id}});
                 let godzina = new Date("1970-01-01T" + startTime + ":00")
                 godzina.setMinutes(godzina.getMinutes() + connection.time)
                 startTime = godzina.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -165,8 +176,11 @@ export class RouteService {
                                 busStopTo_id: element.StopConnection_From
                             }
                         ]
-                }});
-                const busStopFrom = await this.prisma.busStop.findUnique({where: {id: connection.busStopFrom_id}});
+                }}); 
+                let busStopFrom = null;
+                if(element.reverse===true) busStopFrom = await this.prisma.busStop.findUnique({where: {id: connection.busStopTo_id}});
+                else busStopFrom = await this.prisma.busStop.findUnique({where: {id: connection.busStopFrom_id}});
+
                 let godzina = new Date("1970-01-01T" + startTime + ":00")
                 godzina.setMinutes(godzina.getMinutes() + connection.time)
                 startTime = godzina.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });

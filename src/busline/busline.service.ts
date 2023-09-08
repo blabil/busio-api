@@ -159,6 +159,7 @@ export class BuslineService {
           await this.prisma.busLineConnection.create({
             data: {
               busLine: { connect: { id: busLine.id } },
+              reverse: true,
               busStopConnection: {
                 connect: {
                   busStopFrom_id_busStopTo_id: {
@@ -205,14 +206,24 @@ export class BuslineService {
         },
         include: { busStopFrom: true, busStopTo: true },
       });
-
-      const temp = {
-        busStopFromAddress: foundConnection.busStopFrom.address,
-        busStopFromID: foundConnection.busStopFrom_id,
-        busStopToAddress: foundConnection.busStopTo.address,
-        busStopToID: foundConnection.busStopTo_id,
-        time: foundConnection.time,
-      };
+      let temp = null;
+      if (connection.reverse === true) {
+        temp = {
+          busStopFromAddress: foundConnection.busStopTo.address,
+          busStopFromID: foundConnection.busStopTo_id,
+          busStopToAddress: foundConnection.busStopFrom.address,
+          busStopToID: foundConnection.busStopFrom_id,
+          time: foundConnection.time,
+        };
+      } else {
+        temp = {
+          busStopFromAddress: foundConnection.busStopFrom.address,
+          busStopFromID: foundConnection.busStopFrom_id,
+          busStopToAddress: foundConnection.busStopTo.address,
+          busStopToID: foundConnection.busStopTo_id,
+          time: foundConnection.time,
+        };
+      }
 
       connections.push(temp);
     }
@@ -381,6 +392,7 @@ export class BuslineService {
           await this.prisma.busLineConnection.create({
             data: {
               busLine: { connect: { id: parseInt(busLineID) } },
+              reverse: true,
               busStopConnection: {
                 connect: {
                   busStopFrom_id_busStopTo_id: {
@@ -503,6 +515,7 @@ export class BuslineService {
           await this.prisma.busLineConnection.create({
             data: {
               busLine: { connect: { id: parseInt(busLineID) } },
+              reverse: true,
               busStopConnection: {
                 connect: {
                   busStopFrom_id_busStopTo_id: {
@@ -678,6 +691,7 @@ export class BuslineService {
           await this.prisma.busLineConnection.create({
             data: {
               busLine: { connect: { id: parseInt(busLineID) } },
+              reverse: true,
               busStopConnection: {
                 connect: {
                   busStopFrom_id_busStopTo_id: {
@@ -709,7 +723,7 @@ export class BuslineService {
             },
           });
         if (!foundBusLineConnection) {
-            console.log(stop.id, busStopAfter.id)
+          console.log(stop.id, busStopAfter.id);
           await this.prisma.busLineConnection.create({
             data: {
               busLine: { connect: { id: parseInt(busLineID) } },
@@ -765,6 +779,7 @@ export class BuslineService {
           await this.prisma.busLineConnection.create({
             data: {
               busLine: { connect: { id: parseInt(busLineID) } },
+              reverse: true,
               busStopConnection: {
                 connect: {
                   busStopFrom_id_busStopTo_id: {
@@ -787,5 +802,231 @@ export class BuslineService {
     }
 
     return { message: 'Pomyślnie dodano przystanek do linii.' };
+  }
+
+  async deleteBusLineStop(busStop: string, busLine: string) {
+    const busLineConnectionAsFrom =
+      await this.prisma.busLineConnection.findFirst({
+        where: {
+          busLine_id: parseInt(busLine),
+          busStopConnection: { busStopFrom_id: parseInt(busStop) },
+        },
+      });
+    const busLineConnectionAsTo = await this.prisma.busLineConnection.findFirst(
+      {
+        where: {
+          busLine_id: parseInt(busLine),
+          busStopConnection: { busStopTo_id: parseInt(busStop) },
+        },
+      },
+    );
+
+    if (busLineConnectionAsFrom && !busLineConnectionAsTo) {
+      await this.prisma.busLineConnection.delete({
+        where: {
+          StopConnection_From_StopConnection_To_busLine_id: {
+            busLine_id: busLineConnectionAsFrom.busLine_id,
+            StopConnection_From: busLineConnectionAsFrom.StopConnection_From,
+            StopConnection_To: busLineConnectionAsFrom.StopConnection_To,
+          },
+        },
+      });
+      await this.prisma.busLineStop.delete({
+        where: {
+          busLine_id_busStop_id: {
+            busLine_id: parseInt(busLine),
+            busStop_id: parseInt(busStop),
+          },
+        },
+      });
+      await this.prisma.busLineConnection.updateMany({
+        where: { busLine_id: parseInt(busLine) },
+        data: { order: { decrement: 1 } },
+      });
+      return { message: 'Pomyślnie usunięto przystanek na początku.' };
+    } else if (!busLineConnectionAsFrom && busLineConnectionAsTo) {
+      await this.prisma.busLineConnection.delete({
+        where: {
+          StopConnection_From_StopConnection_To_busLine_id: {
+            busLine_id: busLineConnectionAsTo.busLine_id,
+            StopConnection_From: busLineConnectionAsTo.StopConnection_From,
+            StopConnection_To: busLineConnectionAsTo.StopConnection_To,
+          },
+        },
+      });
+      await this.prisma.busLineStop.delete({
+        where: {
+          busLine_id_busStop_id: {
+            busLine_id: parseInt(busLine),
+            busStop_id: parseInt(busStop),
+          },
+        },
+      });
+      return { message: 'Pomyślnie usunięto przystanek na końcu.' };
+    } else if (busLineConnectionAsFrom && busLineConnectionAsTo) {
+      const time1 = await this.prisma.busStopConnection.findFirst({
+        where: {
+          busStopFrom_id: busLineConnectionAsFrom.StopConnection_From,
+          busStopTo_id: busLineConnectionAsFrom.StopConnection_To,
+        },
+        select: { time: true },
+      });
+      const time2 = await this.prisma.busStopConnection.findFirst({
+        where: {
+          busStopFrom_id: busLineConnectionAsTo.StopConnection_From,
+          busStopTo_id: busLineConnectionAsTo.StopConnection_To,
+        },
+        select: { time: true },
+      });
+      const order = busLineConnectionAsTo.order;
+      const busStopFrom = await this.prisma.busStop.findUnique({
+        where: { id: busLineConnectionAsTo.StopConnection_From },
+      });
+      const busStopTo = await this.prisma.busStop.findUnique({
+        where: { id: busLineConnectionAsFrom.StopConnection_To },
+      });
+
+      const foundConnection = await this.prisma.busStopConnection.findFirst({
+        where: {
+          busStopFrom_id: busStopFrom.id,
+          busStopTo_id: busStopTo.id,
+        },
+      });
+
+      const foundConnection2 = await this.prisma.busStopConnection.findFirst({
+        where: {
+          busStopFrom_id: busStopTo.id,
+          busStopTo_id: busStopFrom.id,
+        },
+      });
+
+      if (!foundConnection && !foundConnection2) {
+        await this.prisma.busStopConnection.create({
+          data: {
+            busStopFrom: { connect: { id: busStopFrom.id } },
+            busStopTo: { connect: { id: busStopTo.id } },
+            time: time1.time + time2.time,
+          },
+        });
+        await this.prisma.busLineConnection.delete({
+          where: {
+            StopConnection_From_StopConnection_To_busLine_id: {
+              busLine_id: parseInt(busLine),
+              StopConnection_From: parseInt(busStop),
+              StopConnection_To: busStopTo.id,
+            },
+          },
+        });
+        await this.prisma.busLineConnection.delete({
+          where: {
+            StopConnection_From_StopConnection_To_busLine_id: {
+              busLine_id: parseInt(busLine),
+              StopConnection_From: busStopFrom.id,
+              StopConnection_To: parseInt(busStop),
+            },
+          },
+        });
+        await this.prisma.busLineConnection.create({
+          data: {
+            busLine: { connect: { id: parseInt(busLine) } },
+            busStopConnection: {
+              connect: {
+                busStopFrom_id_busStopTo_id: {
+                  busStopFrom_id: busStopFrom.id,
+                  busStopTo_id: busStopTo.id,
+                },
+              },
+            },
+            order: order,
+          },
+        });
+      }
+      if (foundConnection) {
+        await this.prisma.busLineConnection.delete({
+          where: {
+            StopConnection_From_StopConnection_To_busLine_id: {
+              busLine_id: parseInt(busLine),
+              StopConnection_From: parseInt(busStop),
+              StopConnection_To: busStopTo.id,
+            },
+          },
+        });
+        await this.prisma.busLineConnection.delete({
+          where: {
+            StopConnection_From_StopConnection_To_busLine_id: {
+              busLine_id: parseInt(busLine),
+              StopConnection_From: busStopFrom.id,
+              StopConnection_To: parseInt(busStop),
+            },
+          },
+        });
+        await this.prisma.busLineConnection.create({
+          data: {
+            busLine: { connect: { id: parseInt(busLine) } },
+            busStopConnection: {
+              connect: {
+                busStopFrom_id_busStopTo_id: {
+                  busStopFrom_id: busStopFrom.id,
+                  busStopTo_id: busStopTo.id,
+                },
+              },
+            },
+            order: order,
+          },
+        });
+      }
+      if (foundConnection2) {
+        await this.prisma.busLineConnection.delete({
+          where: {
+            StopConnection_From_StopConnection_To_busLine_id: {
+              busLine_id: parseInt(busLine),
+              StopConnection_From: parseInt(busStop),
+              StopConnection_To: busStopTo.id,
+            },
+          },
+        });
+        await this.prisma.busLineConnection.delete({
+          where: {
+            StopConnection_From_StopConnection_To_busLine_id: {
+              busLine_id: parseInt(busLine),
+              StopConnection_From: busStopFrom.id,
+              StopConnection_To: parseInt(busStop),
+            },
+          },
+        });
+        await this.prisma.busLineConnection.create({
+          data: {
+            busLine: { connect: { id: parseInt(busLine) } },
+            busStopConnection: {
+              connect: {
+                busStopFrom_id_busStopTo_id: {
+                  busStopFrom_id: busStopFrom.id,
+                  busStopTo_id: busStopTo.id,
+                },
+              },
+            },
+            order: order,
+            reverse: true
+          },
+        });
+      }
+      await this.prisma.busLineConnection.updateMany({
+        where: { busLine_id: parseInt(busLine), order: { gt: order } },
+        data: { order: { decrement: 1 } },
+      });
+      await this.prisma.busLineStop.delete({
+        where: {
+          busLine_id_busStop_id: {
+            busLine_id: parseInt(busLine),
+            busStop_id: parseInt(busStop),
+          },
+        },
+      });
+      return {
+        message: `Pomyślnie usunięto przystanek pomiędzy ${busStopFrom.address} : ${busStopTo.address}.`,
+      };
+    } else {
+      return { message: 'Nie znaleziono.' };
+    }
   }
 }

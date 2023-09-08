@@ -103,4 +103,24 @@ export class BusstopService {
         else await this.prisma.busStopConnection.update({ where: { busStopFrom_id_busStopTo_id: {busStopFrom_id: parseInt(busStopToID), busStopTo_id: parseInt(busStopFromID)}}, data: { time: parseInt(time) } });
         return ({message: "Pomyślnie edytowano czas."});
     }
+
+    async deleteStop(id: string){
+        const isStopInBusLineAsFrom = await this.prisma.busLineConnection.findMany({where: {StopConnection_From: parseInt(id)}});
+        const isStopInBusLineAsTo = await this.prisma.busLineConnection.findMany({where: {StopConnection_To: parseInt(id)}});
+        const isAssigned = await this.prisma.busLineStop.findMany({where: {busStop_id: parseInt(id)}});
+        if(isAssigned.length>0) throw new BadRequestException('Nie można usunąć przystanku, jest przypisany do linii autobusowej.');
+        if(isStopInBusLineAsFrom.length>0 || isStopInBusLineAsTo.length>0) throw new BadRequestException('Nie można usunąć przystanku, jest przypisany do linii autobusowej.');
+        if(isStopInBusLineAsFrom.length===0 && isStopInBusLineAsTo.length===0)
+        {
+            await this.prisma.busStopConnection.deleteMany({where: {
+                OR:[
+                    {busStopFrom_id: parseInt(id)},
+                    {busStopTo_id: parseInt(id)}
+                ]
+            }})
+            await this.prisma.busStop.delete({where: {id: parseInt(id)}});
+            return ({message: "Pomyślnie usunięto przystanek."})
+        }
+        else return ({message: "Wystąpił błąd."})
+    }
 }
