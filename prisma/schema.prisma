@@ -20,6 +20,7 @@ model User {
   updateAt DateTime @updatedAt()
 
   busIssue              BusIssue[]
+  BusInsurance          BusInsurance[]
   busIssueModify        BusIssueModify[]
   busBreakDown          BusBreakDown[]
   busBreakDownModify    BusBreakDownModify[]
@@ -55,6 +56,7 @@ model Bus {
 
   busProfile            BusProfile?
   busLineRoute          BusLineRoute[]
+  BusInsurance          BusInsurance[]
   busIssues             BusIssue[]
   busBreakDowns         BusBreakDown[]
   busReview             BusReview[]
@@ -160,6 +162,27 @@ model BusReview {
 
   createdAt             DateTime        
   expiresAt             DateTime?
+}
+
+
+
+//
+// BUS INSURANCE
+//
+
+model BusInsurance {
+  id                    Int             @unique @id @default(autoincrement())
+  company               String
+  price                 Boolean
+
+  bus                   Bus             @relation(fields: [bus_id], references: [id])
+  bus_id                Int             
+
+  user                  User            @relation(fields: [user_id], references: [id])
+  user_id               String          
+
+  createdAt             DateTime        
+  expiresAt             DateTime
 }
 
 

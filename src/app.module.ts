@@ -10,8 +10,9 @@ import { BuslineModule } from './busline/busline.module';
 import { RouteModule } from './route/route.module';
 import { BreakdownModule } from './breakdown/breakdown.module';
 import { ReviewModule } from './review/review.module';
+import { InsuranceModule } from './insurance/insurance.module';
 
 @Module({
-  imports: [AuthModule, PrismaModule, UsersModule, BusModule, WorkerModule, IssueModule, BusstopModule, BuslineModule, RouteModule, BreakdownModule, ReviewModule],
+  imports: [AuthModule, PrismaModule, UsersModule, BusModule, WorkerModule, IssueModule, BusstopModule, BuslineModule, RouteModule, BreakdownModule, ReviewModule, InsuranceModule],
 })
 export class AppModule {}
