@@ -63,7 +63,7 @@ export class UsersService {
         
         })
 
-        return ({message: `Pomyślnie edytowano użytkownika!`});
+        res.send({message: `Pomyślnie edytowano użytkownika!`});
     }
 
     async hashPassword(password: string)

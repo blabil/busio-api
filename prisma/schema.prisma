@@ -173,7 +173,7 @@ model BusReview {
 model BusInsurance {
   id                    Int             @unique @id @default(autoincrement())
   company               String
-  price                 Boolean
+  price                 Int
 
   bus                   Bus             @relation(fields: [bus_id], references: [id])
   bus_id                Int             

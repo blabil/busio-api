@@ -64,6 +64,7 @@ export class BusService {
                     expiresAt: "desc",
                 }},
             busLineRoute: {include: {busLine: true}},
+            BusInsurance: true,
             }});
         return bus;
     }
