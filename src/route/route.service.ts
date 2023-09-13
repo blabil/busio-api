@@ -200,7 +200,7 @@ export class RouteService {
     {
         let foundRoutes = null;
         if(type === 'bus') foundRoutes = await this.prisma.busLineRoute.findMany({where: {bus_id: parseInt(id)}, include: {busLine: {select: {number: true}}}});
-        else foundRoutes = await this.prisma.busLineRoute.findMany({where: {driver_id: id}, include:{busLine: {select: {number: true}}}})
+        else foundRoutes = await this.prisma.busLineRoute.findMany({where: {driver_id: id}, include:{busLine: {select: {number: true, part:true}}}})
         return foundRoutes;
     }
 }
